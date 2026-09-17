@@ -64,6 +64,19 @@ if(USE_SUBMODULE_LIBS)
   # The archetypical WIN32 build case
   # protobuf_INSTALL must be turned OFF whenever building it as a cmake subdir.
   set(protobuf_INSTALL OFF)
+  if(CMAKE_CROSSCOMPILING)
+    set(gRPC_BUILD_CODEGEN ON CACHE BOOL "Build gRPC codegen libraries" FORCE)
+    set(gRPC_BUILD_GRPC_CPP_PLUGIN OFF CACHE BOOL "Build grpc_cpp_plugin" FORCE)
+    set(gRPC_BUILD_GRPC_CSHARP_PLUGIN OFF CACHE BOOL "Build grpc_csharp_plugin" FORCE)
+    set(gRPC_BUILD_GRPC_NODE_PLUGIN OFF CACHE BOOL "Build grpc_node_plugin" FORCE)
+    set(gRPC_BUILD_GRPC_OBJECTIVE_C_PLUGIN OFF CACHE BOOL "Build grpc_objective_c_plugin" FORCE)
+    set(gRPC_BUILD_GRPC_PHP_PLUGIN OFF CACHE BOOL "Build grpc_php_plugin" FORCE)
+    set(gRPC_BUILD_GRPC_PYTHON_PLUGIN OFF CACHE BOOL "Build grpc_python_plugin" FORCE)
+    set(gRPC_BUILD_GRPC_RUBY_PLUGIN OFF CACHE BOOL "Build grpc_ruby_plugin" FORCE)
+    set(protobuf_BUILD_PROTOC_BINARIES OFF CACHE BOOL "Build libprotoc and protoc compiler" FORCE)
+    set(protobuf_BUILD_LIBUPB OFF CACHE BOOL "Build libupb" FORCE)
+    find_program(_gRPC_PROTOBUF_PROTOC_EXECUTABLE protoc REQUIRED)
+  endif()
 
   add_subdirectory(third_party/grpc ${CMAKE_CURRENT_BINARY_DIR}/grpc)
   set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
@@ -75,10 +88,15 @@ if(USE_SUBMODULE_LIBS)
     add_subdirectory(third_party/spdlog ${CMAKE_CURRENT_BINARY_DIR}/spdlog EXCLUDE_FROM_ALL)
   endif()
 
-  set(_PROTOBUF_PROTOC $<TARGET_FILE:protobuf::protoc>)
+  if(CMAKE_CROSSCOMPILING)
+    find_program(_PROTOBUF_PROTOC protoc REQUIRED)
+    find_program(_GRPC_CPP_PLUGIN_EXECUTABLE grpc_cpp_plugin REQUIRED)
+  else()
+    set(_PROTOBUF_PROTOC $<TARGET_FILE:protobuf::protoc>)
+    set(_GRPC_CPP_PLUGIN_EXECUTABLE $<TARGET_FILE:grpc_cpp_plugin>)
+  endif()
   set(_REFLECTION grpc++_reflection)
   set(_GRPC grpc)
-  set(_GRPC_CPP_PLUGIN_EXECUTABLE $<TARGET_FILE:grpc_cpp_plugin>)
   set(_GRPC_GRPCPP grpc++)
   set(_PROTOBUF_LIBPROTOBUF libprotobuf)
   set(_UTF8CPP utf8cpp)
@@ -640,6 +658,15 @@ else()
     APPEND
     PROPERTIES
     COMPILE_OPTIONS "-Werror"
+  )
+
+  set_property(
+    SOURCE
+      "source/server/data_moniker_service.cpp"
+      "source/tests/integration/ni_fake_daqmx_streaming_tests.cpp"
+      "source/tests/integration/ni_fake_fpga_streaming_tests.cpp"
+    APPEND
+    PROPERTY COMPILE_OPTIONS "-Wno-unknown-pragmas"
   )
 endif()
 
