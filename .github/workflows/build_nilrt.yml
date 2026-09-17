@@ -225,3 +225,14 @@ jobs:
         name: ni-grpc-device-tests-ni-linux-rt-x64
         path: ni-grpc-device-tests-ni-linux-rt-x64.tar.gz
         retention-days: 5
+
+  nilrt-result:
+    name: NILRT Cross Compile
+    needs: build-nilrt
+    if: ${{ always() }}
+    runs-on: ubuntu-latest
+    steps:
+    - name: Verify all NILRT builds passed
+      env:
+        NILRT_RESULT: ${{ needs.build-nilrt.result }}
+      run: test "$NILRT_RESULT" = success
