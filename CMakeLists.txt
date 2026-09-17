@@ -1148,7 +1148,7 @@ add_custom_command(
             ${CMAKE_SOURCE_DIR}/source/tests/assets/data/
             $<TARGET_FILE_DIR:SystemTestsRunner>/)
 
-if(USE_NILRT_LEGACY_TOOLCHAIN)
+if(USE_NILRT_LEGACY_TOOLCHAIN AND CMAKE_SYSTEM_PROCESSOR STREQUAL "armv7-a")
     target_link_libraries(SystemTestsRunner stdc++fs)
     target_compile_definitions(SystemTestsRunner PRIVATE FS_EXPERIMENTAL)
 endif()
