@@ -50,7 +50,7 @@ jobs:
       if: ${{ matrix.config.arch == 'armv7-a' }}
       run: |
         sudo apt-get update
-        sudo apt-get install -y cmake ninja-build gcc-arm-linux-gnueabi g++-arm-linux-gnueabi
+        sudo apt-get install -y cmake ninja-build gcc-12-arm-linux-gnueabi g++-12-arm-linux-gnueabi
 
     - name: Setup cmake
       if: ${{ matrix.config.arch == 'x64' }}
@@ -133,11 +133,26 @@ jobs:
         -G "Ninja"
 
     - name: Cross Compile
-      run: >
-        cmake
-        --build build
-        --target ${{ matrix.config.build_target }}
-        -j ${{ steps.cpu-cores.outputs.count }}
+      run: |
+        # Backport Abseil c6b27359 for GCC 6 libstdc++'s std::atomic<T>::load().
+        abseil_patch="$GITHUB_WORKSPACE/cmake/patches/abseil-c6b27359-masked-pointer.patch"
+        grpc_patch="$GITHUB_WORKSPACE/cmake/patches/grpc-remove-redundant-cxx17-includes.patch"
+        if [ "${{ matrix.config.arch }}" = "armv7-a" ]; then
+          git -C "$GITHUB_WORKSPACE/third_party/grpc/third_party/abseil-cpp" apply -p3 "$abseil_patch"
+          git -C "$GITHUB_WORKSPACE/third_party/grpc" apply "$grpc_patch"
+        fi
+
+        build_status=0
+        cmake \
+          --build build \
+          --target ${{ matrix.config.build_target }} \
+          -j ${{ steps.cpu-cores.outputs.count }} || build_status=$?
+
+        if [ "${{ matrix.config.arch }}" = "armv7-a" ]; then
+          git -C "$GITHUB_WORKSPACE/third_party/grpc" apply --reverse "$grpc_patch"
+          git -C "$GITHUB_WORKSPACE/third_party/grpc/third_party/abseil-cpp" apply --reverse -p3 "$abseil_patch"
+        fi
+        exit "$build_status"
 
     # The generated source in git must match the output of workflow builds.
     # If this step fails, something is changing during build. Either:
